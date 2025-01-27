@@ -1,2 +1,4 @@
 config.py
 bot_db.sqlite
+.venv/
+__pycache__/
