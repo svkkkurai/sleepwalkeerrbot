@@ -2,24 +2,72 @@ import asyncio
 import datetime
 from datetime import *
 import logging
-import os
 import sys
 import sqlite3
 import uuid
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
-from aiogram.filters import Command, Filter
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, Chat, ReplyKeyboardMarkup, KeyboardButton, InputMediaPhoto, InputMediaVideo, \
     InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+import initialization
+initialization.createcfg()
 import config
 import messages
 import os
 import platform
 import psutil
 import time
+
+
+import sqlite3
+
+class DatabaseHandler:
+    def __init__(self, db_name='bot_db.sqlite'):
+        self.db_name = db_name
+
+    def create_media_groups_table(self):
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+
+        # Создание таблицы media_groups, если она не существует
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS media_groups (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER,
+                description TEXT,
+                message_id INTEGER
+            )
+        ''')
+
+        conn.commit()
+        conn.close()
+
+    def add_message_id_column(self):
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+
+        # Проверка наличия столбца message_id в таблице media_groups
+        cursor.execute("PRAGMA table_info(media_groups);")
+        columns = [col[1] for col in cursor.fetchall()]
+
+        # Если столбца message_id нет, добавляем его
+        if "message_id" not in columns:
+            cursor.execute('ALTER TABLE media_groups ADD COLUMN message_id INTEGER;')
+
+        conn.commit()
+        conn.close()
+
+# Использование
+db_handler = DatabaseHandler()
+
+# Создание таблицы и добавление столбца
+db_handler.create_media_groups_table()
+db_handler.add_message_id_column()
+
 
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
@@ -36,15 +84,19 @@ send_next = KeyboardButton(text="⏭ Дальше")
 desc_skip = KeyboardButton(text="⏭ Пропустить")
 needhelp = KeyboardButton(text="‼ Нужна помощь")
 menu = KeyboardButton(text="❌ Вернуться в меню")
-help_withpost = KeyboardButton(text="❗Правила постов")
+help_withpost = KeyboardButton(text="❗Правила")
 help_connect = KeyboardButton(text="👤Связаться с модератором")
+help_botinfo = KeyboardButton(text="ℹБот инфо")
+help_botinfo_github = InlineKeyboardButton(text="GitHub", url="https://github.com/svkkkurai/sleepwalkeerrbot")
 shutdown_button = InlineKeyboardButton(text="❗Завершить сессию", callback_data="shutdown")
 discard = InlineKeyboardButton(text="❌Отменить", callback_data="discard")
 
 shutdown_markup = InlineKeyboardMarkup(inline_keyboard=[[shutdown_button, discard]])
 
+github_markup = InlineKeyboardMarkup(inline_keyboard=[[help_botinfo_github]])
+
 main_markup = ReplyKeyboardMarkup(
-    keyboard=[[send, needhelp]],
+    keyboard=[[send, help_connect, needhelp]],
     resize_keyboard=True
 )
 
@@ -54,7 +106,7 @@ cancel_markup = ReplyKeyboardMarkup(
 )
 
 help_markup = ReplyKeyboardMarkup(
-    keyboard=[[help_withpost, help_connect, menu]],
+    keyboard=[[help_withpost, help_botinfo, menu]],
     resize_keyboard=True
 )
 
@@ -420,16 +472,19 @@ async def handle_buttons(message: Message, state: FSMContext):
         await message.reply("ℹ️Отправьте ваше фото!", reply_markup=cancel_markup)
     elif message.text == "‼ Нужна помощь":
         await message.reply("⁉С чем конкретно вам нужна помощь?", reply_markup=help_markup)
-    elif message.text == "❗Правила постов":
+    elif message.text == "❗Правила":
         await message.reply(f"{messages.help_howtopost}", reply_markup=main_markup, parse_mode=ParseMode.MARKDOWN)
     elif message.text == "👤Связаться с модератором":
         await state.set_state(UserStates.waiting_message_to_moderator)
         await message.reply("⁉Напишите ваше сообщение или вернитесь в главное меню.", reply_markup=cancel_markup)
+    elif message.text == "ℹБот инфо":
+        await message.reply(messages.help_botinfo, reply_markup=github_markup, parse_mode=ParseMode.MARKDOWN)
     elif message.text == "❌ Вернуться в меню":
         await message.reply("ℹ️Вы вернулись в меню.", reply_markup=main_markup)
         await state.clear()
     else:
         await bot.send_message(message.from_user.id, "ℹ️ Воспользуйтесь клавиатурой для навигации.", reply_markup=main_markup)
+
 
 async def main():
     await dp.start_polling(bot)
