@@ -84,9 +84,8 @@ send_next = KeyboardButton(text="⏭ Дальше")
 desc_skip = KeyboardButton(text="⏭ Пропустить")
 needhelp = KeyboardButton(text="‼ Нужна помощь")
 menu = KeyboardButton(text="❌ Вернуться в меню")
-help_withpost = KeyboardButton(text="❗Правила")
+help_withpost = KeyboardButton(text="❗Правила постов")
 help_connect = KeyboardButton(text="👤Связаться с модератором")
-help_botinfo = KeyboardButton(text="ℹБот инфо")
 help_botinfo_github = InlineKeyboardButton(text="GitHub", url="https://github.com/svkkkurai/sleepwalkeerrbot")
 shutdown_button = InlineKeyboardButton(text="❗Завершить сессию", callback_data="shutdown")
 discard = InlineKeyboardButton(text="❌Отменить", callback_data="discard")
@@ -96,7 +95,7 @@ shutdown_markup = InlineKeyboardMarkup(inline_keyboard=[[shutdown_button, discar
 github_markup = InlineKeyboardMarkup(inline_keyboard=[[help_botinfo_github]])
 
 main_markup = ReplyKeyboardMarkup(
-    keyboard=[[send, help_connect, needhelp]],
+    keyboard=[[send, needhelp]],
     resize_keyboard=True
 )
 
@@ -106,7 +105,7 @@ cancel_markup = ReplyKeyboardMarkup(
 )
 
 help_markup = ReplyKeyboardMarkup(
-    keyboard=[[help_withpost, help_botinfo, menu]],
+    keyboard=[[help_withpost, help_connect, menu]],
     resize_keyboard=True
 )
 
@@ -199,16 +198,15 @@ async def my_id_command(message: Message):
 
 @dp.message(Command("sysinfo"))
 async def sysinfo(message: Message):
-    # Получение информации об ОС и системе
     user_name = os.getlogin()
     os_name = platform.system() + " " + platform.release()
     build_version = platform.version()
     uptime_seconds = time.time() - psutil.boot_time()
     uptime_struct = time.gmtime(uptime_seconds)
     uptime = f"{uptime_struct.tm_yday - 1} days, {uptime_struct.tm_hour} hours, {uptime_struct.tm_min} minutes"
-    screen_resolution = "1920x1080 @60Hz"  # Установите своё разрешение экрана
+    screen_resolution = "1920x1080 @60Hz"
     cpu_info = platform.processor()
-    gpu_info = "Intel(R) UHD Graphics"  # Получение информации о GPU требует дополнительных библиотек
+    gpu_info = "Intel(R) UHD Graphics"
 
     # Информация о памяти
     virtual_memory = psutil.virtual_memory()
@@ -229,7 +227,7 @@ async def sysinfo(message: Message):
         f"<b>OS:</b> {os_name}\n"
         f"<b>Build:</b> {build_version}\n"
         f"<b>Uptime:</b> {uptime}\n"
-        f"<b>Resolution:</b> {screen_resolution}\n"  # Исправлено: Закрывающий тег </b> был неверно записан
+        f"<b>Resolution:</b> {screen_resolution}\n" 
         f"<b>Terminal:</b> {os.environ.get('COMSPEC', 'cmd.exe')}\n"
         f"<b>CPU:</b> {cpu_info}\n"
         f"<b>GPU:</b> {gpu_info}\n"
@@ -246,6 +244,10 @@ async def shutdown(message: Message):
     else:
         await message.reply("💔Ваших прав недостаточно для выполнения этого действия.")
 
+
+@dp.message(Command("bot_info"))
+async def shutdown(message: Message):
+    await message.reply(messages.help_botinfo, reply_markup=github_markup, parse_mode=ParseMode.MARKDOWN)
 
 
 @dp.message(Command("chat_id"))
@@ -472,13 +474,11 @@ async def handle_buttons(message: Message, state: FSMContext):
         await message.reply("ℹ️Отправьте ваше фото!", reply_markup=cancel_markup)
     elif message.text == "‼ Нужна помощь":
         await message.reply("⁉С чем конкретно вам нужна помощь?", reply_markup=help_markup)
-    elif message.text == "❗Правила":
+    elif message.text == "❗Правила постов":
         await message.reply(f"{messages.help_howtopost}", reply_markup=main_markup, parse_mode=ParseMode.MARKDOWN)
     elif message.text == "👤Связаться с модератором":
         await state.set_state(UserStates.waiting_message_to_moderator)
         await message.reply("⁉Напишите ваше сообщение или вернитесь в главное меню.", reply_markup=cancel_markup)
-    elif message.text == "ℹБот инфо":
-        await message.reply(messages.help_botinfo, reply_markup=github_markup, parse_mode=ParseMode.MARKDOWN)
     elif message.text == "❌ Вернуться в меню":
         await message.reply("ℹ️Вы вернулись в меню.", reply_markup=main_markup)
         await state.clear()
