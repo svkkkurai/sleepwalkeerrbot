@@ -399,24 +399,26 @@ async def process_callback(callback_query: types.CallbackQuery):
 
         if media_group:
             await bot.send_media_group(config.CHANNEL_ID, media_group)
-        today = date.today()
+        ftoday = date.today()
+        today = ftoday.strftime('%d.%m.%Y')
         utc_vanilla = datetime.now(timezone.utc)
         UTC = utc_vanilla.strftime("%H:%M")
         await bot.edit_message_text(
             chat_id=callback_query.message.chat.id,
             message_id=callback_query.message.message_id,
-            text=f"✅Отправлено. Модератор: [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id}), {today} в {UTC} по UTC.",
+            text=f"**✅ Пост отправлен!**\n**👮🏻 Модератор — ** [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{today}** в **{UTC}** по UTC",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=None
         )
     elif action == "reject":
-        today = date.today()
+        ftoday = date.today()
+        today = ftoday.strftime('%d.%m.%Y')
         utc_vanilla = datetime.now(timezone.utc)
         UTC = utc_vanilla.strftime("%H:%M")
         await bot.edit_message_text(
             chat_id=callback_query.message.chat.id,
             message_id=callback_query.message.message_id,
-            text=f"❌Отклонено. Модератор: [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id}), {today} в {UTC} по UTC.",
+            text=f"**❌ Пост отклонён!**\n**👮🏻 Модератор — ** [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{today}** в **{UTC}** по UTC",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=None
         )
@@ -451,7 +453,7 @@ async def receive_message_to_moderator(message: Message, state: FSMContext):
             message_id=message.message_id
         )
         user_moderator_map[forwarded_message.message_id] = message.from_user.id
-        await message.reply("*❗Ваше сообщение отправлено модератору.*\n\nУчтите, что для того, чтобы получить ответ вам нужно открыть профиль при пересылке в настройках конфиденциальности, иначе ответ потеряется.", parse_mode=ParseMode.MARKDOWN)
+        await message.reply("*❗Ваше сообщение отправлено модератору.*\n\nУчтите, что для того, чтобы получить ответ вам нужно открыть профиль при пересылке в настройках конфиденциальности, и написать снова.", parse_mode=ParseMode.MARKDOWN)
         await state.clear()
         await bot.send_message(message.from_user.id, "ℹ️Вы вернулись в меню.", reply_markup=main_markup)
 
