@@ -406,7 +406,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         await bot.edit_message_text(
             chat_id=callback_query.message.chat.id,
             message_id=callback_query.message.message_id,
-            text=f"**✅ Пост отправлен!**\n**👮🏻 Модератор — ** [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{today}** в **{UTC}** по UTC",
+            text=f"**✅ Пост отправлен!**\n**👮🏻 Модератор - ** [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{today}** в **{UTC}** по UTC",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=None
         )
@@ -418,7 +418,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         await bot.edit_message_text(
             chat_id=callback_query.message.chat.id,
             message_id=callback_query.message.message_id,
-            text=f"**❌ Пост отклонён!**\n**👮🏻 Модератор — ** [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{today}** в **{UTC}** по UTC",
+            text=f"**❌ Пост отклонён!**\n**👮🏻 Модератор - ** [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{today}** в **{UTC}** по UTC",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=None
         )
