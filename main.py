@@ -33,7 +33,6 @@ class DatabaseHandler:
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
 
-        # Создание таблицы media_groups, если она не существует
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS media_groups (
                 id TEXT PRIMARY KEY,
@@ -49,22 +48,17 @@ class DatabaseHandler:
     def add_message_id_column(self):
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
-
-        # Проверка наличия столбца message_id в таблице media_groups
         cursor.execute("PRAGMA table_info(media_groups);")
         columns = [col[1] for col in cursor.fetchall()]
-
-        # Если столбца message_id нет, добавляем его
         if "message_id" not in columns:
             cursor.execute('ALTER TABLE media_groups ADD COLUMN message_id INTEGER;')
 
         conn.commit()
         conn.close()
 
-# Использование
 db_handler = DatabaseHandler()
 
-# Создание таблицы и добавление столбца
+
 db_handler.create_media_groups_table()
 db_handler.add_message_id_column()
 
@@ -72,7 +66,6 @@ db_handler.add_message_id_column()
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-# Создаем хранилище состояний и диспетчер
 storage = MemoryStorage()
 bot = Bot(token=config.TOKEN)
 dp = Dispatcher(storage=storage)
@@ -236,6 +229,10 @@ async def sysinfo(message: Message):
         parse_mode=ParseMode.HTML
     )
 
+def fixmd(text: str) -> str:
+    escape_chars = r'\_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
+
 
 @dp.message(Command("shutdown"))
 async def shutdown(message: Message):
@@ -321,17 +318,17 @@ async def receive_description(message: Message, state: FSMContext):
 
     cursor.execute('SELECT file_id, type FROM media_files WHERE group_id = ?', (group_id,))
     files = cursor.fetchall()
-
+    name = fixmd(message.from_user.full_name)
     media_group = []
     for i, (file_id, file_type) in enumerate(files):
         if file_type == 'photo':
             if i == len(files) - 1:
-                media_group.append(InputMediaPhoto(media=file_id, caption=f"{description}\n👤[{message.from_user.full_name}](tg://user?id={message.from_user.id})", parse_mode=ParseMode.MARKDOWN))
+                media_group.append(InputMediaPhoto(media=file_id, caption=f"{description}\n👤[{name}](tg://user?id={message.from_user.id})", parse_mode=ParseMode.MARKDOWN_V2))
             else:
                 media_group.append(InputMediaPhoto(media=file_id))
         elif file_type == 'video':
             if i == len(files) - 1:
-                media_group.append(InputMediaVideo(media=file_id, caption=f"{description}\n👤[{message.from_user.full_name}](tg://user?id={message.from_user.id})", parse_mode=ParseMode.MARKDOWN))
+                media_group.append(InputMediaVideo(media=file_id, caption=f"{description}\n👤[{name}](tg://user?id={message.from_user.id})", parse_mode=ParseMode.MARKDOWN_V2))
             else:
                 media_group.append(InputMediaVideo(media=file_id))
 
@@ -391,11 +388,11 @@ async def process_callback(callback_query: types.CallbackQuery):
 
         media_group = []
         for i, (file_id, file_type, description, _) in enumerate(files):
-            caption = f"{description}\n👤[{user.full_name}](tg://user?id={user.id})\n\n[Подписаться]({link}) | [Отправить пост](tg://user?id=7412484247)" if i == len(files) - 1 else None
+            caption = f"{fixmd(description)}\n👤[{fixmd(user.full_name)}](tg://user?id={user.id})\n\n[Подписаться]({link}) \| [Отправить пост](tg://user?id=7412484247)" if i == len(files) - 1 else None
             if file_type == 'photo':
-                media_group.append(InputMediaPhoto(media=file_id, caption=caption, parse_mode=ParseMode.MARKDOWN))
+                media_group.append(InputMediaPhoto(media=file_id, caption=caption, parse_mode=ParseMode.MARKDOWN_V2))
             elif file_type == 'video':
-                media_group.append(InputMediaVideo(media=file_id, caption=caption, parse_mode=ParseMode.MARKDOWN))
+                media_group.append(InputMediaVideo(media=file_id, caption=caption, parse_mode=ParseMode.MARKDOWN_V2))
 
         if media_group:
             await bot.send_media_group(config.CHANNEL_ID, media_group)
@@ -403,11 +400,12 @@ async def process_callback(callback_query: types.CallbackQuery):
         today = ftoday.strftime('%d.%m.%Y')
         utc_vanilla = datetime.now(timezone.utc)
         UTC = utc_vanilla.strftime("%H:%M")
+        name = fixmd(callback_query.from_user.full_name)
         await bot.edit_message_text(
             chat_id=callback_query.message.chat.id,
             message_id=callback_query.message.message_id,
-            text=f"**✅ Пост отправлен!**\n**👮🏻 Модератор - ** [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{today}** в **{UTC}** по UTC",
-            parse_mode=ParseMode.MARKDOWN,
+            text=f"**✅ Пост отправлен\!**\n**👮🏻 Модератор \- ** [{name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{fixmd(today)}** в **{fixmd(UTC)}** по UTC",
+            parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=None
         )
     elif action == "reject":
@@ -415,11 +413,13 @@ async def process_callback(callback_query: types.CallbackQuery):
         today = ftoday.strftime('%d.%m.%Y')
         utc_vanilla = datetime.now(timezone.utc)
         UTC = utc_vanilla.strftime("%H:%M")
+        name = fixmd(callback_query.from_user.full_name)
+
         await bot.edit_message_text(
             chat_id=callback_query.message.chat.id,
             message_id=callback_query.message.message_id,
-            text=f"**❌ Пост отклонён!**\n**👮🏻 Модератор - ** [{callback_query.from_user.full_name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{today}** в **{UTC}** по UTC",
-            parse_mode=ParseMode.MARKDOWN,
+            text=f"**❌ Пост отклонён\!**\n**👮🏻 Модератор \- ** [{name}](tg://user?id={callback_query.from_user.id})\n\n🕐 Действие модератора было сделано **{fixmd(today)}** в **{fixmd(UTC)}** по UTC",
+            parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=None
         )
 
